@@ -1,7 +1,8 @@
 #include "ofxGLSLSimplexNoise.h"
 
 ofxGLSLSimplexNoise::ofxGLSLSimplexNoise() {
-    frag = STRINGIFY
+    frag = "#version 150 \n";
+    frag += STRINGIFY
     (
      
      float zero_one(float n) {
@@ -100,7 +101,10 @@ ofxGLSLSimplexNoise::ofxGLSLSimplexNoise() {
      uniform vec3 mul;
      uniform vec3 add;
      uniform float alpha;
-     varying vec3 v_texCoord3D;
+
+     in vec3 v_texCoord3D;
+
+     out vec4 out_color;
      
      void main(void) {
          mat3 matColor = mat3(colorR, colorG, colorB);
@@ -114,18 +118,22 @@ ofxGLSLSimplexNoise::ofxGLSLSimplexNoise() {
          float b = mul.b * zero_one(snoise(vec3(uv.x * w * freqB.x, uv.y * h * freqB.y, speed.b * time)) + add.b);
          
          vec3 rgb = vec3(r, g, b);
-         gl_FragColor = vec4((matColor * rgb), alpha);
+         out_color = vec4((matColor * rgb), alpha);
      }
      );
     
-    vert = STRINGIFY
+    vert = "#version 150 \n";
+    vert += STRINGIFY
     (
+     uniform mat4 modelViewProjectionMatrix;
      uniform float time;
-     varying vec3 v_texCoord3D;
+     
+     in vec4 position;
+     out vec3 v_texCoord3D;
      
      void main(void) {
-         gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-         v_texCoord3D = gl_Vertex.xyz;
+         gl_Position = modelViewProjectionMatrix * position;
+         v_texCoord3D = position.xyz;
      }
      );
     
@@ -151,38 +159,40 @@ ofxGLSLSimplexNoise::ofxGLSLSimplexNoise() {
     speed.set(0.2, 0.3, 0.4);
     
     alpha = 1.0;
-    
-    fbo.allocate(ofGetWidth(), ofGetHeight());
 }
 
-void ofxGLSLSimplexNoise::draw() {
+void ofxGLSLSimplexNoise::setup(int width, int height) {
+    fbo.allocate(width, height, GL_RGBA);
+}
+
+void ofxGLSLSimplexNoise::update() {
     fbo.begin();
-    ofClear(0);
+        ofClear(0);
+
+        shader.begin();
+        shader.setUniform1f("time", ofGetElapsedTimef());
+        shader.setUniform2f("resolution", fbo.getWidth(), fbo.getHeight());
+        shader.setUniform2f("freqR", freqR.x, freqR.y);
+        shader.setUniform2f("freqG", freqG.x, freqG.y);
+        shader.setUniform2f("freqB", freqB.x, freqB.y);
+    
+        shader.setUniform3f("colorR", colorR.x, colorR.y, colorR.z);
+        shader.setUniform3f("colorG", colorG.x, colorG.y, colorG.z);
+        shader.setUniform3f("colorB", colorB.x, colorB.y, colorB.z);
+    
+        //shader.setUniform2f("shiftR", shiftR.x, shiftR.y);
+        //shader.setUniform2f("shiftG", shiftG.x, shiftR.y);
+        //shader.setUniform2f("shiftB", shiftB.x, shiftR.y);
+        shader.setUniform3f("mul", mul.x, mul.y, mul.z);
+        shader.setUniform3f("add", add.x, add.y, add.z);
+        shader.setUniform3f("speed", speed.x, speed.y, speed.z);
+        shader.setUniform1f("alpha", alpha);
+    
+            ofScale(ofGetWidth(), ofGetWidth());
+            ofDrawRectangle(0, 0, 1.0, 1.0);
+
+        shader.end();
     fbo.end();
-    fbo.begin();
-    shader.begin();
-    shader.setUniform1f("time", ofGetElapsedTimef());
-    shader.setUniform2f("resolution", ofGetWidth(), ofGetHeight());
-    shader.setUniform2f("freqR", freqR.x, freqR.y);
-    shader.setUniform2f("freqG", freqG.x, freqG.y);
-    shader.setUniform2f("freqB", freqB.x, freqB.y);
     
-    shader.setUniform3f("colorR", colorR.x, colorR.y, colorR.z);
-    shader.setUniform3f("colorG", colorG.x, colorG.y, colorG.z);
-    shader.setUniform3f("colorB", colorB.x, colorB.y, colorB.z);
-    
-    //shader.setUniform2f("shiftR", shiftR.x, shiftR.y);
-    //shader.setUniform2f("shiftG", shiftG.x, shiftR.y);
-    //shader.setUniform2f("shiftB", shiftB.x, shiftR.y);
-    shader.setUniform3f("mul", mul.x, mul.y, mul.z);
-    shader.setUniform3f("add", add.x, add.y, add.z);
-    shader.setUniform3f("speed", speed.x, speed.y, speed.z);
-    shader.setUniform1f("alpha", alpha);
-    
-    ofScale(ofGetWidth(), ofGetWidth());
-    ofDrawRectangle(0, 0, 1.0, 1.0);
-    shader.end();
-    fbo.end();
-    
-    fbo.draw(0, 0, ofGetWidth(), ofGetHeight());
+    //fbo.draw(0, 0, ofGetWidth(), ofGetHeight());
 }

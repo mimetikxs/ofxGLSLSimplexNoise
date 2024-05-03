@@ -6,7 +6,9 @@
 class ofxGLSLSimplexNoise {
 public:
 	ofxGLSLSimplexNoise();
-	void draw();
+
+	void setup(int width, int height);
+	void update();
 
 	string frag;
 	string vert;
